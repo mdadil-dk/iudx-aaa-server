@@ -1,6 +1,8 @@
 package iudx.aaa.server.policy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.apache.logging.log4j.LogManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -9,39 +11,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.stubbing.Answer;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.net.JksOptions;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+import org.apache.logging.log4j.Logger;
 import iudx.aaa.server.configuration.Configuration;
 import iudx.aaa.server.postgres.client.PostgresClient;
-import static org.mockito.Mockito.mock;
 import java.util.HashSet;
 import java.util.Set;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.when;
 
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 public class PolicyServiceTest {
-  private static Logger LOGGER = LoggerFactory.getLogger(PolicyServiceTest.class);
+  private static Logger LOGGER = LogManager.getLogger(PolicyServiceTest.class);
 
   private static Configuration config;
 
@@ -75,7 +62,7 @@ public class PolicyServiceTest {
       VertxTestContext testContext) {
     config = new Configuration();
     vertxObj = vertx;
-    JsonObject dbConfig = config.configLoader(2, vertx2);
+    JsonObject dbConfig = config.configLoader(1, vertx2);
 
     /* Read the configuration and set the postgres client properties. */
     LOGGER.debug("Info : Reading config file");

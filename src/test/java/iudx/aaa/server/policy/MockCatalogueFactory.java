@@ -2,10 +2,12 @@ package iudx.aaa.server.policy;
 
 import java.util.HashSet;
 import java.util.Set;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 public class MockCatalogueFactory {
 
+ 
   private CatalogueClient client;
 
   public static CatalogueClient MockCatalogueFactory() {
