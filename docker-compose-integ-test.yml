@@ -1,0 +1,108 @@
+version: '3.9'
+
+services:
+  postgres:
+    container_name: mock_pg
+    image: postgres:13
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: ${POSTGRESQL_DB}
+      POSTGRES_USER: ${POSTGRESQL_USER}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASS}
+    networks:
+      - integration-test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USER} -d ${POSTGRESQL_DB}"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  keycloak:
+    container_name: mock_kc
+    environment:
+      TZ: Asia/Kolkata
+      DB_VENDOR: postgres
+      DB_ADDR: postgres
+      DB_DATABASE: ${POSTGRESQL_DB}
+      DB_USER: ${POSTGRESQL_USER}
+      DB_PASSWORD: ${POSTGRESQL_PASS}
+      KEYCLOAK_USER: ${KEYCLOAK_USER}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD}
+      KEYCLOAK_IMPORT: ${KEYCLOAK_IMPORT}
+    image: jboss/keycloak:${KEYCLOAK_VERSION}
+    volumes:
+      - ./imports:/opt/jboss/keycloak/imports
+    ports:
+      - "28080:8080"
+      - "28081:8443"
+    restart: unless-stopped
+    healthcheck:
+      test: "curl --fail http://keycloak:8080/auth/realms/master"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - integration-test
+  
+  flyway:
+    container_name: db_flyway
+    image: flyway/flyway:8.0.1-alpine
+    command: 
+      - "-url=${POSTGRESQL_URL}"
+      - "-schemas=${POSTGRESQL_SCHEMA}"
+      - "-user=${POSTGRESQL_USER}"
+      - "-password=${POSTGRESQL_PASS}"
+      - "-locations=filesystem:/flyway/sql"
+      - "-connectRetries=60"
+      - "migrate"
+    volumes:
+      - ./flyway/migrations:/flyway/sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - integration-test
+  
+  aaa:
+    container_name: aaa_server
+    image: iudx/aaa-dev:latest
+    environment:
+      - AUTH_URL=http://localhost:8443
+      - LOG_LEVEL=ALL
+      - AUTH_JAVA_OPTS=-Xmx4096m
+
+    volumes:
+      - ./configs/config-integ.json:/usr/share/app/configs/config.json
+      - ./docs/:/usr/share/app/docs
+      - ./configs/keystore.jks:/usr/share/app/configs/keystore.jks
+      - /tmp/iudx/:/tmp/iudx/
+    ports:
+      - "8443:8443"
+      - "9000:9000"
+    restart: on-failure
+    networks: 
+      - integration-test
+    logging:
+         driver: "json-file"
+         options:
+             max-file: "5"
+             max-size: "100m"
+    command: bash -c "exec java $$AUTH_JAVA_OPTS -Duser.timezone=Asia/Kolkata -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory -jar ./fatjar.jar  --host $$(hostname) -c configs/config.json"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail http://aaa:8443/auth/v1/cert"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    
+        
+
+networks:
+  integration-test:
